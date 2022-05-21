@@ -133,22 +133,24 @@ class Drone:
         while True:
             try:
                 self.current_time_us = int(round(time.time() * 1000000))
-                print(self.get_Position())
+                #print(self.get_Position())
             except KeyboardInterrupt:
                 print("\nEXIT")
                 os._exit(0)
             except:
                 raise
-            time.sleep(1/10)
+            time.sleep(10)
 
     def arm_and_takeoff(self, altitude):
+        print("Staring up arming process")
         print(self.vehicle.is_armable)
         self.vehicle.mode = VehicleMode("STABILIZE")
+        # self.vehicle.mode = VehicleMode("MANUAL")
         self.vehicle.armed = True
         print("ARMED")
         while not self.vehicle.armed:
             time.sleep(1)
-        self.vehicle.mode = VehicleMode("GUIDED")
+        self.vehicle.mode = VehicleMode("MANUAL")
         self.vehicle.simple_takeoff(altitude)
         print("TAKEOFF")
         time.sleep(3)
@@ -159,7 +161,7 @@ class Drone:
         while self.status == 1:
             time.sleep(1)
             self.condition_yaw(self.target_yaw)
-            self.set_velocity(self.target_velocity[2], self.target_velocity[0], self.target_velocity[1])
+            self.set_velocity(self.target_velocity[0], self.target_velocity[2], self.target_velocity[1])
 
 
     def land(self):
@@ -188,13 +190,13 @@ class Drone:
             0,
             0, 0,
             mavutil.mavlink.MAV_FRAME_LOCAL_NED,
-            0b0000111111111000,
+            0b0000111111000111,
             0, 0, 0,
             newVX, newVY, newVZ,
             0, 0, 0,
             0, 0
         )
-        self.vehicle.set_mavlink(msg)
+        self.vehicle.send_mavlink(msg)
     
 
 
@@ -217,14 +219,14 @@ class Drone:
     
     def set_target(self, target):
         # print(target)
-        self.target_velocity = [target['vx'], target['vy'], target['vz']]
+        self.target_velocity = [target['x'], target['y'], target['z']]
         #self.target_translation = [target['x'], target['y'], target['z']]
         # print(self.target_translation)
         self.target_yaw = target['yaw']
         if self.status != target['status']:
             self.status = target['status']
             if self.status == 1:
-                cmd_thread = threading.Thread(target=self.arm_and_takeoff, args=(.5, ))
+                cmd_thread = threading.Thread(target=self.arm_and_takeoff, args=[.5])
                 cmd_thread.start()
             elif self.status == 0:
                 cmd_thread = threading.Thread(target=self.land)
